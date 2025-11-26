@@ -5,7 +5,7 @@ use crate::decoder_tdt::ParakeetTDTDecoder;
 use crate::error::{Error, Result};
 use crate::execution::ModelConfig as ExecutionConfig;
 use crate::model_tdt::ParakeetTDTModel;
-use crate::timestamps::{process_timestamps, TimestampMode};
+use crate::timestamps::TimestampMode;
 use crate::transcriber::Transcriber;
 use crate::vocab::Vocabulary;
 use std::path::{Path, PathBuf};
@@ -95,26 +95,13 @@ impl Transcriber for ParakeetTDT {
             audio::extract_features_raw(audio, sample_rate, channels, &self.preprocessor_config)?;
         let (tokens, frame_indices, durations) = self.model.forward(features)?;
 
-        let mut result = self.decoder.decode_with_timestamps(
+        let result = self.decoder.decode_with_timestamps(
             &tokens,
             &frame_indices,
             &durations,
             self.preprocessor_config.hop_length,
             self.preprocessor_config.sampling_rate,
         )?;
-
-        // Apply timestamp mode conversion
-        let mode = mode.unwrap_or(TimestampMode::Tokens);
-        result.tokens = process_timestamps(&result.tokens, mode);
-
-        // Rebuild full text from processed tokens
-        result.text = result
-            .tokens
-            .iter()
-            .map(|t| t.text.as_str())
-            .collect::<Vec<_>>()
-            .join(" ");
-
-        Ok(result)
+        Ok(Self::post_process_trancription_result(result, mode))
     }
 }

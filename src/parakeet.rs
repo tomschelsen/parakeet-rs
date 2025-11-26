@@ -4,7 +4,7 @@ use crate::decoder::{ParakeetDecoder, TranscriptionResult};
 use crate::error::{Error, Result};
 use crate::execution::ModelConfig as ExecutionConfig;
 use crate::model::ParakeetModel;
-use crate::timestamps::{process_timestamps, TimestampMode};
+use crate::timestamps::TimestampMode;
 use crate::transcriber::Transcriber;
 use std::path::{Path, PathBuf};
 
@@ -136,24 +136,12 @@ impl Transcriber for Parakeet {
             audio::extract_features_raw(audio, sample_rate, channels, &self.preprocessor_config)?;
         let logits = self.model.forward(features)?;
 
-        let mut result = self.decoder.decode_with_timestamps(
+        let result = self.decoder.decode_with_timestamps(
             &logits,
             self.preprocessor_config.hop_length,
             self.preprocessor_config.sampling_rate,
         )?;
 
-        // Process timestamps to requested output mode
-        let mode = mode.unwrap_or(TimestampMode::Tokens);
-        result.tokens = process_timestamps(&result.tokens, mode);
-
-        // Rebuild full text from processed tokens to ensure consistency
-        result.text = result
-            .tokens
-            .iter()
-            .map(|t| t.text.as_str())
-            .collect::<Vec<_>>()
-            .join(" ");
-
-        Ok(result)
+        Ok(Self::post_process_trancription_result(result, mode))
     }
 }

@@ -1,7 +1,7 @@
 use crate::audio::{load_audio, SamplesAndMetadata};
 use crate::decoder::TranscriptionResult;
 use crate::error::{Error, Result};
-use crate::timestamps::TimestampMode;
+use crate::timestamps::{process_timestamps, TimestampMode};
 use std::path::Path;
 
 pub trait Batcher {
@@ -34,6 +34,24 @@ where
 }
 
 pub trait Transcriber {
+    fn post_process_trancription_result(
+        mut result: TranscriptionResult,
+        mode: Option<TimestampMode>,
+    ) -> TranscriptionResult {
+        // Apply timestamp mode conversion
+        let mode = mode.unwrap_or(TimestampMode::Tokens);
+        result.tokens = process_timestamps(&result.tokens, mode);
+
+        // Rebuild full text from processed tokens
+        result.text = result
+            .tokens
+            .iter()
+            .map(|t| t.text.as_str())
+            .collect::<Vec<_>>()
+            .join(" ");
+        result
+    }
+
     fn transcribe_samples(
         &mut self,
         audio: Vec<f32>,
