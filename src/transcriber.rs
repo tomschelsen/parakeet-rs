@@ -13,7 +13,7 @@ where
     P: AsRef<Path>,
 {
     fn build_batch(&self) -> Result<Vec<SamplesAndMetadata>> {
-        let loaded = load_audio(&self)?;
+        let loaded = load_audio(self)?;
         Ok(Vec::from([loaded]))
     }
 }
