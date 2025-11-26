@@ -5,7 +5,12 @@ use ndarray::Array2;
 use std::f32::consts::PI;
 use std::path::Path;
 
-pub fn load_audio<P: AsRef<Path>>(path: P) -> Result<(Vec<f32>, WavSpec)> {
+pub struct SamplesAndMetadata {
+    pub samples: Vec<f32>,
+    pub spec: WavSpec,
+}
+
+pub fn load_audio<P: AsRef<Path>>(path: P) -> Result<SamplesAndMetadata> {
     let mut reader = WavReader::open(path)?;
     let spec = reader.spec();
 
@@ -21,7 +26,7 @@ pub fn load_audio<P: AsRef<Path>>(path: P) -> Result<(Vec<f32>, WavSpec)> {
             .map_err(|e| Error::Audio(format!("Failed to read int samples: {e}")))?,
     };
 
-    Ok((samples, spec))
+    Ok(SamplesAndMetadata { samples, spec })
 }
 
 pub fn apply_preemphasis(audio: &[f32], coef: f32) -> Vec<f32> {

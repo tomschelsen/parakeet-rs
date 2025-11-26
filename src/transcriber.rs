@@ -1,23 +1,39 @@
-use crate::audio::load_audio;
+use crate::audio::{load_audio, SamplesAndMetadata};
 use crate::decoder::TranscriptionResult;
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::timestamps::TimestampMode;
 use std::path::Path;
 
-/// Trait for common transcription functionality
+pub trait Batcher {
+    fn build_batch(&self) -> Result<Vec<SamplesAndMetadata>>;
+}
+
+impl<P> Batcher for P
+where
+    P: AsRef<Path>,
+{
+    fn build_batch(&self) -> Result<Vec<SamplesAndMetadata>> {
+        let loaded = load_audio(&self)?;
+        Ok(Vec::from([loaded]))
+    }
+}
+
+impl<P> Batcher for [P]
+where
+    P: AsRef<Path>,
+{
+    fn build_batch(&self) -> Result<Vec<SamplesAndMetadata>> {
+        let draft: Vec<SamplesAndMetadata> =
+            self.iter().filter_map(|x| load_audio(x).ok()).collect();
+        if !draft.is_empty() {
+            Ok(draft)
+        } else {
+            Err(Error::Audio("No file could be properly loaded".into()))
+        }
+    }
+}
+
 pub trait Transcriber {
-    /// Transcribe audio samples.
-    ///
-    /// # Arguments
-    ///
-    /// * `audio` - Audio samples as f32 values
-    /// * `sample_rate` - Sample rate in Hz
-    /// * `channels` - Number of audio channels
-    /// * `mode` - Optional timestamp output mode (Tokens, Words, or Sentences)
-    ///
-    /// # Returns
-    ///
-    /// A `TranscriptionResult` containing the transcribed text and timestamps at the requested level.
     fn transcribe_samples(
         &mut self,
         audio: Vec<f32>,
@@ -26,47 +42,19 @@ pub trait Transcriber {
         mode: Option<TimestampMode>,
     ) -> Result<TranscriptionResult>;
 
-    /// Transcribe an audio file with timestamps
-    ///
-    /// # Arguments
-    ///
-    /// * `audio_path` - A path to the audio file that needs to be transcribed.
-    /// * `mode` - Optional timestamp output mode (Tokens, Words, or Sentences)
-    ///
-    /// # Returns
-    ///
-    /// This function returns a `TranscriptionResult` which includes the transcribed text along with timestamps at the requested level.
-    fn transcribe_file<P: AsRef<Path>>(
+    fn transcribe<P: Batcher>(
         &mut self,
-        audio_path: P,
-        mode: Option<TimestampMode>,
-    ) -> Result<TranscriptionResult> {
-        let audio_path = audio_path.as_ref();
-        let (audio, spec) = load_audio(audio_path)?;
-
-        self.transcribe_samples(audio, spec.sample_rate, spec.channels, mode)
-    }
-
-    /// Transcribes multiple audio files in batch.
-    ///
-    /// # Arguments
-    ///
-    /// * `audio_paths`: A slice of paths to the audio files that need to be transcribed.
-    /// * `mode` - Optional timestamp output mode (Tokens, Words, or Sentences)
-    ///
-    /// # Returns
-    ///
-    /// This function returns a `TranscriptionResult` which includes the transcribed text along with timestamps at the requested level.
-    fn transcribe_file_batch<P: AsRef<Path>>(
-        &mut self,
-        audio_paths: &[P],
+        input: P,
         mode: Option<TimestampMode>,
     ) -> Result<Vec<TranscriptionResult>> {
-        let mut results = Vec::with_capacity(audio_paths.len());
-        for path in audio_paths {
-            let result = self.transcribe_file(path, mode)?;
-            results.push(result);
-        }
-        Ok(results)
+        let batch = input.build_batch()?;
+        let res: Vec<TranscriptionResult> = batch
+            .into_iter()
+            .filter_map(|f| {
+                self.transcribe_samples(f.samples, f.spec.sample_rate, f.spec.channels, mode)
+                    .ok()
+            })
+            .collect();
+        Ok(res)
     }
 }

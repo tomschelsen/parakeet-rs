@@ -63,7 +63,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         #[cfg(not(feature = "coreml"))]
         {
             let mut parakeet = parakeet_rs::ParakeetTDT::from_pretrained("./tdt", None)?;
-            let result = parakeet.transcribe_file(audio_path, Some(TimestampMode::Sentences))?;
+            let result = parakeet.transcribe(audio_path, Some(TimestampMode::Sentences))?;
+            let result = &result[0];
             println!("{}", result.text);
 
             println!("\nSentencess:");
@@ -98,7 +99,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // CTC model doesn't predict punctuation (lowercase alphabet only)
     // This means no sentence boundaries - use Words mode instead of Sentences
-    let result = parakeet.transcribe_file(audio_path, Some(TimestampMode::Words))?;
+    let result = parakeet.transcribe(audio_path, Some(TimestampMode::Words))?;
+    let result = &result[0];
 
     // Print transcription
     println!("{}", result.text);
