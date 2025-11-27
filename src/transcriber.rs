@@ -59,15 +59,21 @@ pub trait Transcriber {
         paths: P,
         mode: Option<TimestampMode>,
     ) -> Result<Vec<TranscriptionResult>> {
-        // TODO : see how cloning is avoideable
-        let config = &self.preprocessor_config().to_owned();
         let file_batch = paths.normalize();
-        let res: Vec<TranscriptionResult> = file_batch
-            .iter()
-            // TODO : find best way to bubble up errors instead of silently filtering them
-            .filter_map(|f| load_audio(f, config).ok())
-            .filter_map(|a| self.transcribe_16khz_mono_samples(a, mode).ok())
-            .collect();
-        Ok(res)
+        let mut results = Vec::with_capacity(file_batch.len());
+        for f in file_batch.iter() {
+            match load_audio(f, self.preprocessor_config()) {
+                Ok(audio) => match self.transcribe_16khz_mono_samples(audio, mode) {
+                    Ok(result) => results.push(result),
+                    Err(e) => {
+                        eprintln!("Error transcribing {}: {}", f.display(), e);
+                    }
+                },
+                Err(e) => {
+                    eprintln!("Error loading audio {}: {}", f.display(), e);
+                }
+            }
+        }
+        Ok(results)
     }
 }

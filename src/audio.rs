@@ -35,7 +35,7 @@ pub fn load_audio<P: AsRef<Path>>(path: P, config: &PreprocessorConfig) -> Resul
         let fsr = spec.sample_rate;
         let msr = config.sample_rate;
         Err(Error::Audio(format!(
-            "Audio file {} sample rate {fsr} doesn't match expected {msr}. Please resample your audio first.", path.as_ref().display()
+            "Audio file sample rate {fsr} doesn't match expected {msr}. Please resample your audio first."
         )))
     }
 }
