@@ -33,7 +33,7 @@ const WIN_LENGTH: usize = 400;
 const HOP_LENGTH: usize = 160;
 const N_MELS: usize = 128;
 const PREEMPH: f32 = 0.97;
-const LOG_ZERO_GUARD: f32 = 5.960464478e-8;
+const LOG_ZERO_GUARD: f32 = 5.960_464_5e-8;
 const SAMPLE_RATE: usize = 16000;
 const FMIN: f32 = 0.0;
 const FMAX: f32 = 8000.0;
@@ -259,7 +259,7 @@ impl Sortformer {
 
         // Process in chunks
         let chunk_stride = CHUNK_LEN * SUBSAMPLING;
-        let num_chunks = (total_frames + chunk_stride - 1) / chunk_stride;
+        let num_chunks = total_frames.div_ceil(chunk_stride);
 
         let mut all_chunk_preds = Vec::new();
 
@@ -381,7 +381,7 @@ impl Sortformer {
             .map_err(|e| Error::Model(format!("Failed to reshape embs: {e}")))?;
 
             // Calculate valid frames
-            let valid_frames = (current_len + SUBSAMPLING - 1) / SUBSAMPLING;
+            let valid_frames = current_len.div_ceil(SUBSAMPLING);
 
             (preds, new_embs, valid_frames)
         };
@@ -564,7 +564,7 @@ impl Sortformer {
         min_pos_scores_per_spk: usize,
     ) -> Array2<f32> {
         // Count positive scores per speaker
-        let mut pos_count = vec![0usize; NUM_SPEAKERS];
+        let mut pos_count = [0usize; NUM_SPEAKERS];
         for t in 0..scores.shape()[0] {
             for s in 0..NUM_SPEAKERS {
                 if scores[[t, s]] > 0.0 {
@@ -609,8 +609,8 @@ impl Sortformer {
             sorted.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
             // Boost top K
-            for i in 0..n_boost_per_spk.min(sorted.len()) {
-                let t = sorted[i].0;
+            for item in sorted.iter().take(n_boost_per_spk.min(sorted.len())) {
+                let t = item.0;
                 if scores[[t, s]] != f32::NEG_INFINITY {
                     scores[[t, s]] -= scale_factor * 0.5f32.ln();
                 }
@@ -871,9 +871,7 @@ impl Sortformer {
         let hann = Self::hann_window(WIN_LENGTH);
         let win_offset = (N_FFT - WIN_LENGTH) / 2;
         let mut fft_window = vec![0.0f32; N_FFT];
-        for i in 0..WIN_LENGTH {
-            fft_window[win_offset + i] = hann[i];
-        }
+        fft_window[win_offset..(WIN_LENGTH + win_offset)].copy_from_slice(&hann[..WIN_LENGTH]);
 
         // Pad signal for center=True (like librosa/torch.stft)
         // Padding is n_fft // 2 on each side

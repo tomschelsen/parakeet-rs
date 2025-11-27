@@ -24,8 +24,6 @@ run Sortformer on the full audio for diarization, then chunk the audio into
 */
 
 #[cfg(feature = "sortformer")]
-use hound;
-#[cfg(feature = "sortformer")]
 use parakeet_rs::sortformer::{DiarizationConfig, Sortformer};
 #[cfg(feature = "sortformer")]
 use parakeet_rs::{TimestampMode, Transcriber};
@@ -109,12 +107,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut parakeet = parakeet_rs::ParakeetTDT::from_pretrained("./tdt", None)?;
 
         // Transcribe with Sentences mode (TDT provides punctuation for proper segmentation)
-        if let Ok(result) = parakeet.transcribe_16khz_mono_samples(
-            audio,
-            spec.sample_rate,
-            spec.channels,
-            Some(TimestampMode::Sentences),
-        ) {
+        if let Ok(result) =
+            parakeet.transcribe_16khz_mono_samples(audio, Some(TimestampMode::Sentences))
+        {
             // For each sentence from TDT, find the corresponding speaker from Sortformer
             for segment in &result.tokens {
                 // Find speaker with maximum overlap

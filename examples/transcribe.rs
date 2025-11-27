@@ -41,7 +41,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         {
             let config = ExecutionConfig::new().with_execution_provider(ExecutionProvider::CoreML);
             let mut parakeet = parakeet_rs::ParakeetTDT::from_pretrained("./tdt", Some(config))?;
-            let result = parakeet.transcribe_file(audio_path, Some(TimestampMode::Sentences))?;
+            let result = parakeet.transcribe(audio_path, Some(TimestampMode::Sentences))?;
+            let result = &result[0];
             println!("{}", result.text);
 
             println!("\nSentencess:");
