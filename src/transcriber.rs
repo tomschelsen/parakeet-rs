@@ -1,39 +1,35 @@
-use crate::audio::{load_audio, SamplesAndMetadata};
+use crate::audio::load_audio;
+use crate::config::PreprocessorConfig;
 use crate::decoder::TranscriptionResult;
-use crate::error::{Error, Result};
+use crate::error::Result;
 use crate::timestamps::{process_timestamps, TimestampMode};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
-pub trait Batcher {
-    fn build_batch(&self) -> Result<Vec<SamplesAndMetadata>>;
+pub trait OneOrManyPaths {
+    fn normalize(&self) -> Vec<PathBuf>;
 }
 
-impl<P> Batcher for P
+impl<P> OneOrManyPaths for P
 where
     P: AsRef<Path>,
 {
-    fn build_batch(&self) -> Result<Vec<SamplesAndMetadata>> {
-        let loaded = load_audio(self)?;
-        Ok(Vec::from([loaded]))
+    fn normalize(&self) -> Vec<PathBuf> {
+        Vec::from([self.as_ref().to_path_buf()])
     }
 }
 
-impl<P> Batcher for [P]
+impl<P> OneOrManyPaths for [P]
 where
     P: AsRef<Path>,
 {
-    fn build_batch(&self) -> Result<Vec<SamplesAndMetadata>> {
-        let draft: Vec<SamplesAndMetadata> =
-            self.iter().filter_map(|x| load_audio(x).ok()).collect();
-        if !draft.is_empty() {
-            Ok(draft)
-        } else {
-            Err(Error::Audio("No file could be properly loaded".into()))
-        }
+    fn normalize(&self) -> Vec<PathBuf> {
+        self.iter().map(|p| p.as_ref().to_path_buf()).collect()
     }
 }
 
 pub trait Transcriber {
+    fn preprocessor_config(&self) -> &PreprocessorConfig;
+
     fn post_process_trancription_result(
         mut result: TranscriptionResult,
         mode: Option<TimestampMode>,
@@ -52,26 +48,25 @@ pub trait Transcriber {
         result
     }
 
-    fn transcribe_samples(
+    fn transcribe_16khz_mono_samples(
         &mut self,
         audio: Vec<f32>,
-        sample_rate: u32,
-        channels: u16,
         mode: Option<TimestampMode>,
     ) -> Result<TranscriptionResult>;
 
-    fn transcribe<P: Batcher>(
+    fn transcribe<P: OneOrManyPaths>(
         &mut self,
-        input: P,
+        paths: P,
         mode: Option<TimestampMode>,
     ) -> Result<Vec<TranscriptionResult>> {
-        let batch = input.build_batch()?;
-        let res: Vec<TranscriptionResult> = batch
-            .into_iter()
-            .filter_map(|f| {
-                self.transcribe_samples(f.samples, f.spec.sample_rate, f.spec.channels, mode)
-                    .ok()
-            })
+        // TODO : see how cloning is avoideable
+        let config = &self.preprocessor_config().to_owned();
+        let file_batch = paths.normalize();
+        let res: Vec<TranscriptionResult> = file_batch
+            .iter()
+            // TODO : find best way to bubble up errors instead of silently filtering them
+            .filter_map(|f| load_audio(f, config).ok())
+            .filter_map(|a| self.transcribe_16khz_mono_samples(a, mode).ok())
             .collect();
         Ok(res)
     }

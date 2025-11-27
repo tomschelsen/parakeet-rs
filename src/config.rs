@@ -11,7 +11,7 @@ pub struct PreprocessorConfig {
     pub preemphasis: f32,
     pub processor_class: String,
     pub return_attention_mask: bool,
-    pub sampling_rate: usize,
+    pub sample_rate: usize,
     pub win_length: usize,
 }
 
@@ -34,7 +34,7 @@ impl Default for PreprocessorConfig {
             preemphasis: 0.97,
             processor_class: "ParakeetProcessor".to_string(),
             return_attention_mask: true,
-            sampling_rate: 16000,
+            sample_rate: 16000,
             win_length: 400,
         }
     }

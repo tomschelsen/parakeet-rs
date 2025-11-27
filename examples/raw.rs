@@ -1,7 +1,7 @@
 /*
-Demonstrates using transcribe_samples()
+Demonstrates using transcribe_16khz_mono_samples()
 
-This example shows manual audio loading and calling transcribe_samples() directly
+This example shows manual audio loading and calling transcribe_16khz_mono_samples() directly
 with sample_rate and channels instead of using transcribe_file()
 
 Usage:
@@ -53,13 +53,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Loading TDT model...");
         let mut parakeet = ParakeetTDT::from_pretrained("./tdt", None)?;
 
-        // Use transcribe_samples() with raw parameters and timestamp mode
-        let result = parakeet.transcribe_samples(
-            audio,
-            spec.sample_rate,
-            spec.channels,
-            Some(TimestampMode::Sentences),
-        )?;
+        // Use transcribe_16khz_mono_samples() with raw parameters and timestamp mode
+        let result =
+            parakeet.transcribe_16khz_mono_samples(audio, Some(TimestampMode::Sentences))?;
 
         println!("{}", result.text);
         println!("\nSentencess:");
@@ -75,12 +71,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // CTC model doesn't predict punctuation (lowercase alphabet only)
         // This means no sentence boundaries. we use Words mode instead of Sentences
-        let result = parakeet.transcribe_samples(
-            audio,
-            spec.sample_rate,
-            spec.channels,
-            Some(TimestampMode::Words),
-        )?;
+        let result = parakeet.transcribe_16khz_mono_samples(audio, Some(TimestampMode::Words))?;
 
         println!("{}", result.text);
 

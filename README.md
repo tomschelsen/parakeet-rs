@@ -16,7 +16,7 @@ let result = parakeet.transcribe_file("audio.wav")?;
 println!("{}", result.text);
 
 // Or transcribe in-memory audio
-// let result = parakeet.transcribe_samples(audio, 16000, 1)?;
+// let result = parakeet.transcribe_16khz_mono_samples(audio, 16000, 1)?;
 
 // Token-level timestamps
 for token in result.tokens {
@@ -33,7 +33,7 @@ let result = parakeet.transcribe_file("audio.wav")?;
 println!("{}", result.text);
 
 // Or transcribe in-memory audio
-// let result = parakeet.transcribe_samples(audio, 16000, 1)?;
+// let result = parakeet.transcribe_16khz_mono_samples(audio, 16000, 1)?;
 
 // Token-level timestamps
 for token in result.tokens {

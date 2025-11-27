@@ -9,7 +9,7 @@ TDT (Multilingual):
 cargo run --example transcribe 6_speakers.wav tdt
 
 NOTE: For manual audio loading without using transcribe_file(), see examples/raw.rs
-- Shows transcribe_samples(audio, sample_rate, channels, timestamps) usage
+- Shows transcribe_16khz_mono_samples(audio, sample_rate, channels, timestamps) usage
 
 WARNING: This may fail on very long audio files (>8 min).
 For longer audio, use the pyannote example which processes segments, or split your audio into chunks.

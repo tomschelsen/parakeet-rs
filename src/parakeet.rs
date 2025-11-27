@@ -119,27 +119,25 @@ impl Parakeet {
     pub fn model_dir(&self) -> &Path {
         &self.model_dir
     }
-    pub fn preprocessor_config(&self) -> &PreprocessorConfig {
-        &self.preprocessor_config
-    }
 }
 
 impl Transcriber for Parakeet {
-    fn transcribe_samples(
+    fn preprocessor_config(&self) -> &PreprocessorConfig {
+        &self.preprocessor_config
+    }
+
+    fn transcribe_16khz_mono_samples(
         &mut self,
         audio: Vec<f32>,
-        sample_rate: u32,
-        channels: u16,
         mode: Option<TimestampMode>,
     ) -> Result<TranscriptionResult> {
-        let features =
-            audio::extract_features_raw(audio, sample_rate, channels, &self.preprocessor_config)?;
+        let features = audio::extract_features_raw(audio, &self.preprocessor_config)?;
         let logits = self.model.forward(features)?;
 
         let result = self.decoder.decode_with_timestamps(
             &logits,
             self.preprocessor_config.hop_length,
-            self.preprocessor_config.sampling_rate,
+            self.preprocessor_config.sample_rate,
         )?;
 
         Ok(Self::post_process_trancription_result(result, mode))

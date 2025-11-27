@@ -109,7 +109,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut parakeet = parakeet_rs::ParakeetTDT::from_pretrained("./tdt", None)?;
 
         // Transcribe with Sentences mode (TDT provides punctuation for proper segmentation)
-        if let Ok(result) = parakeet.transcribe_samples(
+        if let Ok(result) = parakeet.transcribe_16khz_mono_samples(
             audio,
             spec.sample_rate,
             spec.channels,

@@ -1,32 +1,43 @@
 use crate::config::PreprocessorConfig;
 use crate::error::{Error, Result};
-use hound::{WavReader, WavSpec};
+use hound::WavReader;
 use ndarray::Array2;
 use std::f32::consts::PI;
 use std::path::Path;
 
-pub struct SamplesAndMetadata {
-    pub samples: Vec<f32>,
-    pub spec: WavSpec,
-}
-
-pub fn load_audio<P: AsRef<Path>>(path: P) -> Result<SamplesAndMetadata> {
-    let mut reader = WavReader::open(path)?;
+// Safety: this function check invariants that the audio is 16kHz, 16bit and mono
+// All other functions expect this has been checked and take audio as a raw Vec<f32>
+pub fn load_audio<P: AsRef<Path>>(path: P, config: &PreprocessorConfig) -> Result<Vec<f32>> {
+    let mut reader = WavReader::open(&path)?;
     let spec = reader.spec();
-
-    let samples: Vec<f32> = match spec.sample_format {
-        hound::SampleFormat::Float => reader
-            .samples::<f32>()
-            .collect::<std::result::Result<Vec<_>, _>>()
-            .map_err(|e| Error::Audio(format!("Failed to read float samples: {e}")))?,
-        hound::SampleFormat::Int => reader
-            .samples::<i16>()
-            .map(|s| s.map(|s| s as f32 / 32768.0))
-            .collect::<std::result::Result<Vec<_>, _>>()
-            .map_err(|e| Error::Audio(format!("Failed to read int samples: {e}")))?,
-    };
-
-    Ok(SamplesAndMetadata { samples, spec })
+    if spec.sample_rate == config.sample_rate as u32 {
+        let samples: Vec<f32> = match spec.sample_format {
+            hound::SampleFormat::Float => reader
+                .samples::<f32>()
+                .collect::<std::result::Result<Vec<_>, _>>()
+                .map_err(|e| Error::Audio(format!("Failed to read float samples: {e}")))?,
+            hound::SampleFormat::Int => reader
+                .samples::<i16>()
+                .map(|s| s.map(|s| s as f32 / 32768.0))
+                .collect::<std::result::Result<Vec<_>, _>>()
+                .map_err(|e| Error::Audio(format!("Failed to read int samples: {e}")))?,
+        };
+        // sum to mono if necessary
+        if spec.channels > 1 {
+            let samples: Vec<f32> = samples
+                .chunks(spec.channels as usize)
+                .map(|chunk| chunk.iter().sum::<f32>() / spec.channels as f32)
+                .collect();
+            return Ok(samples);
+        }
+        Ok(samples)
+    } else {
+        let fsr = spec.sample_rate;
+        let msr = config.sample_rate;
+        Err(Error::Audio(format!(
+            "Audio file {} sample rate {fsr} doesn't match expected {msr}. Please resample your audio first.", path.as_ref().display()
+        )))
+    }
 }
 
 pub fn apply_preemphasis(audio: &[f32], coef: f32) -> Vec<f32> {
@@ -134,31 +145,14 @@ fn create_mel_filterbank(n_fft: usize, n_mels: usize, sample_rate: usize) -> Arr
 /// 2D array of mel spectrogram features (time_steps x feature_size)
 pub fn extract_features_raw(
     mut audio: Vec<f32>,
-    sample_rate: u32,
-    channels: u16,
     config: &PreprocessorConfig,
 ) -> Result<Array2<f32>> {
-    if sample_rate != config.sampling_rate as u32 {
-        return Err(Error::Audio(format!(
-            "Audio sample rate {} doesn't match expected {}. Please resample your audio first.",
-            sample_rate, config.sampling_rate
-        )));
-    }
-
-    if channels > 1 {
-        let mono: Vec<f32> = audio
-            .chunks(channels as usize)
-            .map(|chunk| chunk.iter().sum::<f32>() / channels as f32)
-            .collect();
-        audio = mono;
-    }
-
     audio = apply_preemphasis(&audio, config.preemphasis);
 
     let spectrogram = stft(&audio, config.n_fft, config.hop_length, config.win_length);
 
     let mel_filterbank =
-        create_mel_filterbank(config.n_fft, config.feature_size, config.sampling_rate);
+        create_mel_filterbank(config.n_fft, config.feature_size, config.sample_rate);
     let mel_spectrogram = mel_filterbank.dot(&spectrogram);
     let mel_spectrogram = mel_spectrogram.mapv(|x| (x.max(1e-10)).ln());
 
