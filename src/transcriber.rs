@@ -60,20 +60,15 @@ pub trait Transcriber {
         mode: Option<TimestampMode>,
     ) -> Result<Vec<TranscriptionResult>> {
         let file_batch = paths.normalize();
-        let mut results = Vec::with_capacity(file_batch.len());
-        for f in file_batch.iter() {
-            match load_audio(f, self.preprocessor_config()) {
-                Ok(audio) => match self.transcribe_16khz_mono_samples(audio, mode) {
-                    Ok(result) => results.push(result),
-                    Err(e) => {
-                        eprintln!("Error transcribing {}: {}", f.display(), e);
-                    }
-                },
-                Err(e) => {
-                    eprintln!("Error loading audio {}: {}", f.display(), e);
-                }
-            }
-        }
-        Ok(results)
+        let checked_loaded_audio = file_batch
+            .iter()
+            .map(|f| load_audio(f, self.preprocessor_config()))
+            .collect::<Result<Vec<_>>>()?;
+
+        // TODO : pass a Vec<Vec<32>> to transcribe_..._samples instead
+        checked_loaded_audio
+            .into_iter()
+            .map(|audio| self.transcribe_16khz_mono_samples(audio, mode))
+            .collect::<Result<Vec<_>>>()
     }
 }

@@ -8,6 +8,7 @@ use std::path::Path;
 // Safety: this function check invariants that the audio is 16kHz, 16bit and mono
 // All other functions expect this has been checked and take audio as a raw Vec<f32>
 pub fn load_audio<P: AsRef<Path>>(path: P, config: &PreprocessorConfig) -> Result<Vec<f32>> {
+    let p_disp = path.as_ref().display();
     let mut reader = WavReader::open(&path)?;
     let spec = reader.spec();
     if spec.sample_rate == config.sample_rate as u32 {
@@ -15,12 +16,14 @@ pub fn load_audio<P: AsRef<Path>>(path: P, config: &PreprocessorConfig) -> Resul
             hound::SampleFormat::Float => reader
                 .samples::<f32>()
                 .collect::<std::result::Result<Vec<_>, _>>()
-                .map_err(|e| Error::Audio(format!("Failed to read float samples: {e}")))?,
+                .map_err(|e| {
+                    Error::Audio(format!("{p_disp}: Failed to read float samples: {e}"))
+                })?,
             hound::SampleFormat::Int => reader
                 .samples::<i16>()
                 .map(|s| s.map(|s| s as f32 / 32768.0))
                 .collect::<std::result::Result<Vec<_>, _>>()
-                .map_err(|e| Error::Audio(format!("Failed to read int samples: {e}")))?,
+                .map_err(|e| Error::Audio(format!("{p_disp}: Failed to read int samples: {e}")))?,
         };
         // sum to mono if necessary
         if spec.channels > 1 {
@@ -35,7 +38,7 @@ pub fn load_audio<P: AsRef<Path>>(path: P, config: &PreprocessorConfig) -> Resul
         let fsr = spec.sample_rate;
         let msr = config.sample_rate;
         Err(Error::Audio(format!(
-            "Audio file sample rate {fsr} doesn't match expected {msr}. Please resample your audio first."
+            "{p_disp}: File sample rate {fsr} doesn't match expected {msr}. Please resample your audio first."
         )))
     }
 }
