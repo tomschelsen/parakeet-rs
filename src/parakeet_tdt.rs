@@ -1,5 +1,6 @@
 use crate::audio;
 use crate::config::PreprocessorConfig;
+use std::num::NonZeroUsize;
 use crate::decoder::TranscriptionResult;
 use crate::decoder_tdt::ParakeetTDTDecoder;
 use crate::error::{Error, Result};
@@ -48,9 +49,9 @@ impl ParakeetTDT {
         // TDT-specific preprocessor config (128 features instead of 80)
         let preprocessor_config = PreprocessorConfig {
             feature_extractor_type: "ParakeetFeatureExtractor".to_string(),
-            feature_size: 128,
-            hop_length: 160,
-            n_fft: 512,
+            feature_size: NonZeroUsize::new(128).unwrap(),
+            hop_length: NonZeroUsize::new(160).unwrap(),
+            n_fft: NonZeroUsize::new(512).unwrap(),
             padding_side: "right".to_string(),
             padding_value: 0.0,
             preemphasis: 0.97,
@@ -99,7 +100,7 @@ impl Transcriber for ParakeetTDT {
             &tokens,
             &frame_indices,
             &durations,
-            self.preprocessor_config.hop_length,
+            self.preprocessor_config.hop_length.get(),
             self.preprocessor_config.sampling_rate,
         )?;
 

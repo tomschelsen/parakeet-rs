@@ -138,7 +138,7 @@ impl Transcriber for Parakeet {
 
         let mut result = self.decoder.decode_with_timestamps(
             &logits,
-            self.preprocessor_config.hop_length,
+            self.preprocessor_config.hop_length.get(),
             self.preprocessor_config.sampling_rate,
         )?;
 
