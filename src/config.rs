@@ -1,12 +1,11 @@
 use serde::{Deserialize, Serialize};
-use std::num::NonZeroUsize;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PreprocessorConfig {
     pub feature_extractor_type: String,
-    pub feature_size: NonZeroUsize,
-    pub hop_length: NonZeroUsize,
-    pub n_fft: NonZeroUsize,
+    pub feature_size: usize,
+    pub hop_length: usize,
+    pub n_fft: usize,
     pub padding_side: String,
     pub padding_value: f32,
     pub preemphasis: f32,
@@ -27,9 +26,9 @@ impl Default for PreprocessorConfig {
     fn default() -> Self {
         Self {
             feature_extractor_type: "ParakeetFeatureExtractor".to_string(),
-            feature_size: NonZeroUsize::new(80).unwrap(),
-            hop_length: NonZeroUsize::new(160).unwrap(),
-            n_fft: NonZeroUsize::new(512).unwrap(),
+            feature_size: 80,
+            hop_length: 160,
+            n_fft: 512,
             padding_side: "right".to_string(),
             padding_value: 0.0,
             preemphasis: 0.97,
