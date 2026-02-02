@@ -580,7 +580,7 @@ impl Nemotron {
         const F_SP: f32 = 200.0 / 3.0;
         const MIN_LOG_HZ: f32 = 1000.0;
         const MIN_LOG_MEL: f32 = MIN_LOG_HZ / F_SP;
-        const LOG_STEP: f32 = 0.06875177742094912;
+        const LOG_STEP: f32 = 0.068_751_775;
 
         let hz_to_mel = |hz: f32| -> f32 {
             if hz < MIN_LOG_HZ {

@@ -26,8 +26,6 @@ run Sortformer on the full audio for diarization, then chunk the audio into
 */
 
 #[cfg(feature = "sortformer")]
-use hound;
-#[cfg(feature = "sortformer")]
 use parakeet_rs::sortformer::{DiarizationConfig, Sortformer};
 #[cfg(feature = "sortformer")]
 use parakeet_rs::{TimestampMode, Transcriber};

@@ -90,7 +90,7 @@ pub fn extract_features_raw(
 
     // Compute mel spectrogram using spectrograms crate
     let spectrogram = spectrograms::MelPowerSpectrogram::compute(
-        audio_slice.as_ref(),
+        audio_slice,
         &spectrogram_params,
         &mel_params,
         None, // No additional log params needed
